@@ -1,0 +1,32 @@
+rules_version = '2';
+
+// Party-game rules: anyone with the link can play. There is no auth, so these
+// only validate shape — fine for a private trivia night, not for anything sensitive.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /gameState/{docId} {
+      allow read, write: if docId == 'current';
+    }
+
+    match /questions/{questionId} {
+      allow read, delete: if true;
+      allow create, update: if request.resource.data.text is string
+                            && request.resource.data.options is list
+                            && request.resource.data.options.size() == 4
+                            && (request.resource.data.image == null
+                                || (request.resource.data.image is string
+                                    && request.resource.data.image.size() < 600000))
+                            && (!('optionImages' in request.resource.data)
+                                || request.resource.data.optionImages is list);
+    }
+
+    match /players/{playerId} {
+      allow read, delete: if true;
+      allow create, update: if request.resource.data.name is string
+                            && request.resource.data.name.size() > 0
+                            && request.resource.data.name.size() <= 20
+                            && request.resource.data.score is int;
+    }
+  }
+}

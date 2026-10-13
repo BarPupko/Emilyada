@@ -1,0 +1,89 @@
+{
+  "quizTitle": "How Well do you know Emily?",
+  "questions": [
+    {
+      "id": "q1",
+      "text": "What is Emily's favourite thing to do after school?",
+      "options": ["Dance", "Walk the dog", "Take a nap", "Watch TV"],
+      "correctAnswerIndex": 0
+    },
+    {
+      "id": "q2",
+      "text": "What is Emily's favourite show on Netflix",
+      "options": ["Yong Sheldon", "Dance moms", "The Rookie", "Stranger Things"],
+      "correctAnswerIndex": 1
+    },
+    {
+      "id": "q3",
+      "text": "What is Emily's favourite food?",
+      "options": ["Sushi", "Mac & Cheese", "Olivie salad", "Pizza"],
+      "correctAnswerIndex": 1
+    },
+    {
+      "id": "q4",
+      "text": "Which musical would Emily most want to be in?",
+      "options": ["Cinderella", "Frozen", "Mama mia", "Romeo & Juliet"],
+      "correctAnswerIndex": 2
+    },
+    {
+      "id": "q5",
+      "text": "What is Emily most likely to do when her favourite song stars playing?",
+      "options": ["Start singing immediately", "Keep talking like nothing happened", "Leaving the room", "Covers her ears"],
+      "correctAnswerIndex": 0
+    },
+    {
+      "id": "q6",
+      "text": "What type of vacation Emily prefer?",
+      "options": ["Camping in a tent", "Being a counsellor at Star School summer camp", "Going on a Disney cruise", "Road trip"],
+      "correctAnswerIndex": 2
+    },
+    {
+      "id": "q7",
+      "text": "If Emily could choose one place to spend the whole day, where would she go?",
+      "options": ["Camping", "Library", "A shopping mall", "Gym"],
+      "correctAnswerIndex": 2
+    },
+    {
+      "id": "q8",
+      "text": "What animals does Emily have at home?",
+      "options": ["Alligator & Chipmunk", "Dog & Cat", "Fish & Rat", "Unicorn & Stitch"],
+      "correctAnswerIndex": 1
+    },
+    {
+      "id": "q9",
+      "text": "Which describes Emily best?",
+      "options": ["A future Broadway star", "Captain of the hockey team", "A wilderness survival expert", "Corgi trainer"],
+      "correctAnswerIndex": 0
+    },
+    {
+      "id": "q10",
+      "text": "What would Emily choose for a perfect evening?",
+      "options": ["Homework and early bedtime", "Bowling with friends", "Cleaning her room", "Helping her mom with dinner"],
+      "correctAnswerIndex": 1
+    },
+    {
+      "id": "q11",
+      "text": "Which of the following does Emily never did?",
+      "options": ["Her homework", "Making people laugh", "Skating on the ice", "Go to sleepover"],
+      "correctAnswerIndex": 3
+    },
+    {
+      "id": "q12",
+      "text": "If Emily had the chance to get any drink what would she get?",
+      "options": ["Gogol - Mogol", "Matcha", "Ice tea", "Diet Coke"],
+      "correctAnswerIndex": 3
+    },
+    {
+      "id": "q13",
+      "text": "If Emily had a magic carpet, where would she go?",
+      "options": ["Alaska", "Agrabah", "France", "USA"],
+      "correctAnswerIndex": 2
+    },
+    {
+      "id": "q14",
+      "text": "What store could Emily easily spend $200 at?",
+      "options": ["Dollarama", "Sephora", "No Frills", "Indigo"],
+      "correctAnswerIndex": 1
+    }
+  ]
+}

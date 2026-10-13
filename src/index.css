@@ -1,0 +1,95 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Fredoka", ui-rounded, "Segoe UI", system-ui, sans-serif;
+
+  --animate-pop-in: pop-in 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  --animate-bounce-in: bounce-in 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  --animate-slide-up: slide-up 0.5s ease-out both;
+  --animate-bob: bob 2.6s ease-in-out infinite;
+  --animate-wiggle: wiggle 1.2s ease-in-out infinite;
+  --animate-shake: shake 0.6s ease-in-out both;
+  --animate-heartbeat: heartbeat 0.8s ease-in-out infinite;
+  --animate-spin-slow: spin 8s linear infinite;
+  --animate-float-up: float-up 16s linear infinite;
+  --animate-twinkle: twinkle 2.5s ease-in-out infinite;
+  --animate-confetti: confetti 3s ease-in both;
+  --animate-gradient: gradient 14s ease infinite;
+  --animate-shine: shine 2.8s ease-in-out infinite;
+
+  @keyframes pop-in {
+    0% { opacity: 0; transform: scale(0.3) rotate(-10deg); }
+    100% { opacity: 1; transform: scale(1) rotate(0); }
+  }
+  @keyframes bounce-in {
+    0% { opacity: 0; transform: scale(0) translateY(40px); }
+    60% { opacity: 1; transform: scale(1.15) translateY(-10px); }
+    100% { transform: scale(1) translateY(0); }
+  }
+  @keyframes slide-up {
+    0% { opacity: 0; transform: translateY(30px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes bob {
+    0%, 100% { transform: translateY(0) rotate(0); }
+    50% { transform: translateY(-6px) rotate(0.6deg); }
+  }
+  @keyframes wiggle {
+    0%, 100% { transform: rotate(-6deg); }
+    50% { transform: rotate(6deg); }
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-14px); }
+    40%, 80% { transform: translateX(14px); }
+  }
+  @keyframes heartbeat {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.18); }
+  }
+  @keyframes float-up {
+    0% { transform: translateY(0) rotate(0); }
+    100% { transform: translateY(-130vh) rotate(360deg); }
+  }
+  @keyframes twinkle {
+    0%, 100% { opacity: 0.15; transform: scale(0.6); }
+    50% { opacity: 0.9; transform: scale(1.2); }
+  }
+  @keyframes confetti {
+    0% { transform: translate3d(0, -20px, 0) rotate(0); opacity: 1; }
+    85% { opacity: 1; }
+    100% { transform: translate3d(var(--drift, 0px), 110vh, 0) rotate(900deg); opacity: 0; }
+  }
+  @keyframes gradient {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+  @keyframes shine {
+    0% { transform: translateX(-150%) skewX(-20deg); }
+    60%, 100% { transform: translateX(250%) skewX(-20deg); }
+  }
+}
+
+html,
+body {
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+/* Rainbow-ish animated backdrop used behind every screen */
+.fun-bg {
+  background: linear-gradient(135deg, #1e1b4b, #4c1d95, #831843, #1e3a8a, #312e81);
+  background-size: 400% 400%;
+  animation: var(--animate-gradient);
+}
+
+.text-outline {
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.35), 0 0 24px rgba(255, 255, 255, 0.15);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
