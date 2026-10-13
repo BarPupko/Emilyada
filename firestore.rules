@@ -1,32 +1,39 @@
 rules_version = '2';
 
-// Party-game rules: anyone with the link can play. There is no auth, so these
-// only validate shape — fine for a private trivia night, not for anything sensitive.
+// Party-game rules: anyone with a game code can play. There is no sign-in, so these
+// only validate shape — fine for a family trivia night, not for anything sensitive.
+// (Host keys are checked in the app, not here.)
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    match /gameState/{docId} {
-      allow read, write: if docId == 'current';
+    match /games/{code} {
+      allow read, update: if true;
+      allow create: if request.resource.data.title is string
+                    && request.resource.data.hostKey is string
+                    && request.resource.data.hostKey.size() >= 4;
+
+      match /questions/{questionId} {
+        allow read, delete: if true;
+        allow create, update: if request.resource.data.text is string
+                              && request.resource.data.options is list
+                              && request.resource.data.options.size() == 4
+                              && (request.resource.data.image == null
+                                  || (request.resource.data.image is string
+                                      && request.resource.data.image.size() < 600000));
+      }
+
+      match /players/{playerId} {
+        allow read, delete: if true;
+        allow create, update: if request.resource.data.name is string
+                              && request.resource.data.name.size() > 0
+                              && request.resource.data.name.size() <= 20
+                              && request.resource.data.score is int;
+      }
     }
 
+    // Pre-multi-game data (read once to migrate the Emily questions).
     match /questions/{questionId} {
-      allow read, delete: if true;
-      allow create, update: if request.resource.data.text is string
-                            && request.resource.data.options is list
-                            && request.resource.data.options.size() == 4
-                            && (request.resource.data.image == null
-                                || (request.resource.data.image is string
-                                    && request.resource.data.image.size() < 600000))
-                            && (!('optionImages' in request.resource.data)
-                                || request.resource.data.optionImages is list);
-    }
-
-    match /players/{playerId} {
-      allow read, delete: if true;
-      allow create, update: if request.resource.data.name is string
-                            && request.resource.data.name.size() > 0
-                            && request.resource.data.name.size() <= 20
-                            && request.resource.data.score is int;
+      allow read: if true;
     }
   }
 }

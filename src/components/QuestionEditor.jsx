@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { addDoc, deleteDoc, onSnapshot, setDoc, writeBatch } from 'firebase/firestore'
+import { useRef, useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
+import { addDoc, deleteDoc, setDoc, writeBatch } from 'firebase/firestore'
 import { db } from '../firebase'
-import { STATUS, gameRef, questionRef, questionsCol, seedQuestions } from '../lib/game'
+import { STATUS, normalizeCode, questionRef as qRef, questionsCol } from '../lib/game'
+import useGame from '../lib/useGame'
 import useQuestions from '../lib/useQuestions'
 import resizeImage from '../lib/resizeImage'
 import { ANSWER_STYLES, Shape } from './AnswerTile'
@@ -13,23 +14,14 @@ const ANSWER_IMAGE = { maxSide: 400, maxChars: 110_000 }
 const withOptionImages = (q) => ({ ...q, options: [...q.options], optionImages: q.optionImages ? [...q.optionImages] : [null, null, null, null] })
 
 export default function QuestionEditor() {
-  const { questions, loaded, inFirestore } = useQuestions()
-  const [game, setGame] = useState(undefined)
+  const code = normalizeCode(useParams().code)
+  const questionRef = (id) => qRef(code, id)
+  const { questions, loaded } = useQuestions(code)
+  const { game } = useGame(code)
   const [editing, setEditing] = useState(null) // null = list, otherwise { id?, ...question }
   const [message, setMessage] = useState(null)
-  const seeding = useRef(false)
   const quickInput = useRef(null)
   const quickTarget = useRef(null)
-
-  useEffect(() => onSnapshot(gameRef, (s) => setGame(s.exists() ? s.data() : null)), [])
-
-  // First visit: copy the starting questions from the JSON file into Firestore.
-  useEffect(() => {
-    if (loaded && !inFirestore && !seeding.current) {
-      seeding.current = true
-      seedQuestions().catch((e) => setMessage({ type: 'error', text: e.message }))
-    }
-  }, [loaded, inFirestore])
 
   const locked = game?.status === STATUS.ACTIVE || game?.status === STATUS.REVEAL
 
@@ -66,7 +58,7 @@ export default function QuestionEditor() {
       await setDoc(questionRef(q.id), { ...data, order: q.order }, { merge: true })
     } else {
       const maxOrder = Math.max(-1, ...questions.map((x) => x.order ?? 0))
-      await addDoc(questionsCol, { ...data, order: maxOrder + 1 })
+      await addDoc(questionsCol(code), { ...data, order: maxOrder + 1 })
     }
     setEditing(null)
     flash('Saved! ✅')
@@ -99,10 +91,15 @@ export default function QuestionEditor() {
   return (
     <div className="min-h-dvh bg-slate-100 pb-32 text-slate-900">
       <header className="sticky top-0 z-10 flex items-center gap-3 bg-indigo-950 px-4 py-4 text-white shadow">
-        <Link to="/host" className="rounded-xl bg-white/15 px-4 py-3 text-lg font-bold">
+        <Link to={`/host/${code}`} className="rounded-xl bg-white/15 px-4 py-3 text-lg font-bold">
           ← Back
         </Link>
-        <h1 className="flex-1 text-center text-2xl font-black">Edit Questions</h1>
+        <h1 className="flex-1 text-center text-2xl font-bold">
+          Edit Questions
+          <span className="block text-base font-normal text-white/70">
+            {game?.title} · code {code}
+          </span>
+        </h1>
         <span className="w-20" />
       </header>
 
@@ -126,20 +123,27 @@ export default function QuestionEditor() {
         ) : (
           <button
             onClick={() => setEditing(withOptionImages(EMPTY))}
-            className="mb-6 w-full rounded-2xl bg-green-600 py-6 text-2xl font-black text-white shadow-[0_6px_0_rgba(0,0,0,0.25)] active:translate-y-1"
+            className="mb-6 w-full rounded-2xl bg-green-600 py-6 text-2xl font-bold text-white shadow-[0_6px_0_rgba(0,0,0,0.25)] active:translate-y-1"
           >
             ➕ Add a new question
           </button>
         )}
 
         {!loaded && <p className="text-center text-xl">Loading…</p>}
+        {loaded && questions.length === 0 && (
+          <p className="rounded-2xl bg-white p-8 text-center text-2xl shadow">
+            No questions yet.
+            <br />
+            Tap <b>➕ Add a new question</b> to write your first one!
+          </p>
+        )}
         <input ref={quickInput} type="file" accept="image/*" onChange={onQuickFile} className="hidden" />
 
         <ol className="space-y-4">
           {questions.map((q, i) => (
             <li key={q.id} className="overflow-hidden rounded-2xl bg-white shadow">
               <div className="flex items-start gap-3 p-4">
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-indigo-950 text-xl font-black text-white">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-indigo-950 text-xl font-bold text-white">
                   {i + 1}
                 </span>
                 <div className="flex-1">
@@ -260,7 +264,7 @@ function EditForm({ initial, onSave, onCancel }) {
   return (
     <div className="min-h-dvh bg-slate-100 pb-40 text-slate-900">
       <header className="sticky top-0 z-10 bg-indigo-950 px-4 py-4 text-center text-white shadow">
-        <h1 className="text-2xl font-black">{initial.id ? 'Change question' : 'New question'}</h1>
+        <h1 className="text-2xl font-bold">{initial.id ? 'Change question' : 'New question'}</h1>
       </header>
 
       <main className="mx-auto max-w-2xl space-y-6 p-4">
@@ -370,7 +374,7 @@ function EditForm({ initial, onSave, onCancel }) {
             <button
               onClick={submit}
               disabled={saving || loadingImage}
-              className="flex-[2] rounded-2xl bg-green-600 py-5 text-2xl font-black text-white shadow-[0_6px_0_rgba(0,0,0,0.25)] active:translate-y-1 disabled:opacity-50"
+              className="flex-[2] rounded-2xl bg-green-600 py-5 text-2xl font-bold text-white shadow-[0_6px_0_rgba(0,0,0,0.25)] active:translate-y-1 disabled:opacity-50"
             >
               {saving ? 'Saving…' : '💾 Save'}
             </button>
@@ -384,7 +388,7 @@ function EditForm({ initial, onSave, onCancel }) {
 function Step({ n, title, children }) {
   return (
     <section className="rounded-2xl bg-white p-5 shadow">
-      <h2 className="mb-4 flex items-center gap-3 text-2xl font-black">
+      <h2 className="mb-4 flex items-center gap-3 text-2xl font-bold">
         <span className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-950 text-lg text-white">{n}</span>
         {title}
       </h2>
