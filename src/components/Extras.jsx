@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import QRCode from 'qrcode'
+import { avatarOf } from '../lib/avatars'
 import { REACTIONS } from '../lib/game'
 import { isMuted, onMuteChange, setMuted, sounds } from '../lib/sound'
 
@@ -73,7 +74,7 @@ export function FloatingReactions({ players }) {
       const at = p.reaction?.at ?? 0
       if (at > (seen.current.get(p.id) ?? 0)) {
         seen.current.set(p.id, at)
-        fresh.push({ id: `${p.id}-${at}`, emoji: p.reaction.emoji, name: p.name, left: 4 + Math.random() * 84 })
+        fresh.push({ id: `${p.id}-${at}`, emoji: p.reaction.emoji, name: `${avatarOf(p)} ${p.name}`, left: 4 + Math.random() * 84 })
       }
     }
     if (!fresh.length) return
@@ -91,6 +92,36 @@ export function FloatingReactions({ players }) {
           <span className="mt-1 rounded-full bg-white px-3 py-0.5 text-lg font-bold text-indigo-950 shadow-lg">{it.name}</span>
         </div>
       ))}
+    </div>
+  )
+}
+
+/**
+ * Big pop-up card for a custom moment (e.g. a GIF of someone saying "Oh no!").
+ * popup: { key, text, picture?, emoji?, ms? } — a new key shows it again.
+ */
+export function MomentPopup({ popup }) {
+  const [shown, setShown] = useState(null)
+  useEffect(() => {
+    if (!popup) return
+    setShown(popup)
+    const t = setTimeout(() => setShown(null), popup.ms ?? 4000)
+    return () => clearTimeout(t)
+  }, [popup])
+  if (!shown) return null
+  return (
+    <div aria-live="polite" className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6">
+      <div
+        key={shown.key}
+        className="flex max-w-xl animate-bounce-in flex-col items-center rounded-3xl bg-white p-6 text-center text-indigo-950 shadow-2xl ring-8 ring-amber-300"
+      >
+        {shown.picture ? (
+          <img src={shown.picture} alt="" className="max-h-[50vh] rounded-2xl object-contain" />
+        ) : (
+          <span className="animate-wiggle text-9xl">{shown.emoji}</span>
+        )}
+        <p className="mt-4 text-4xl font-bold">{shown.text}</p>
+      </div>
     </div>
   )
 }

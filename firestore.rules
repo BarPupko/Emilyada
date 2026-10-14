@@ -22,6 +22,17 @@ service cloud.firestore {
                                       && request.resource.data.image.size() < 600000));
       }
 
+      match /history/{entryId} {
+        allow read, delete: if true;
+        allow create: if request.resource.data.players is list;
+      }
+
+      match /media/{mediaId} {
+        allow read, delete: if true;
+        allow create, update: if request.resource.data.data is string
+                              && request.resource.data.data.size() < 1000000;
+      }
+
       match /players/{playerId} {
         allow read, delete: if true;
         allow create, update: if request.resource.data.name is string

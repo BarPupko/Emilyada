@@ -2,7 +2,9 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import CreateGame from './components/CreateGame'
 import Home from './components/Home'
 import HostController from './components/HostController'
+import GameHistory from './components/GameHistory'
 import HostGate from './components/HostGate'
+import MomentSettings from './components/MomentSettings'
 import PlayerScreen from './components/PlayerScreen'
 import QuestionEditor from './components/QuestionEditor'
 import { DEFAULT_CODE } from './lib/game'
@@ -27,6 +29,22 @@ export default function App() {
           element={
             <HostGate>
               <QuestionEditor />
+            </HostGate>
+          }
+        />
+        <Route
+          path="/host/:code/sounds"
+          element={
+            <HostGate>
+              <MomentSettings />
+            </HostGate>
+          }
+        />
+        <Route
+          path="/host/:code/history"
+          element={
+            <HostGate>
+              <GameHistory />
             </HostGate>
           }
         />

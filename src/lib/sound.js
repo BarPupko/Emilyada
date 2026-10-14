@@ -56,6 +56,17 @@ export const sounds = {
     ),
 }
 
+let clip = null
+/** Plays a recorded/uploaded sound (data URL). Returns false when there's none, so callers can fall back. */
+export function playClip(src) {
+  if (!src) return false
+  if (muted) return true
+  clip?.pause()
+  clip = new Audio(src)
+  clip.play().catch(() => {})
+  return true
+}
+
 export const isMuted = () => muted
 export function setMuted(m) {
   muted = m

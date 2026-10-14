@@ -7,7 +7,9 @@ import quiz from '../data/questions.json'
 //                                          demo, currentQuestionIndex, status, questionStartedAtMs,
 //                                          scoredIndex, leaderboard, answerCounts, playerCount, fastest }
 //   games/{code}/questions/{id}       -> { order, text, options[4], correctAnswerIndex, image, optionImages[4] }
-//   games/{code}/players/{playerId}   -> { name, score, demoScore, streak, answer, lastResult, rank, reaction }
+//   games/{code}/players/{playerId}   -> { name, avatar, score, demoScore, streak, answer, lastResult, rank, reaction }
+//   games/{code}/history/{id}         -> { title, finishedAt, questionCount, players: [{ name, avatar, score }] }
+//   games/{code}/media/{moment}_{kind} -> { data }  custom sound/picture (data URL), kind = 'sound' | 'picture'
 
 export const DEFAULT_CODE = 'EMILY'
 export const DEFAULT_TITLE = quiz.quizTitle
@@ -21,6 +23,18 @@ export const playersCol = (code) => collection(db, 'games', code, 'players')
 export const playerRef = (code, id) => doc(db, 'games', code, 'players', id)
 export const questionsCol = (code) => collection(db, 'games', code, 'questions')
 export const questionRef = (code, id) => doc(db, 'games', code, 'questions', id)
+export const historyCol = (code) => collection(db, 'games', code, 'history')
+export const mediaCol = (code) => collection(db, 'games', code, 'media')
+export const mediaRef = (code, moment, kind) => doc(db, 'games', code, 'media', `${moment}_${kind}`)
+
+// Moments the host can personalise with a recorded voice and/or a picture or GIF.
+export const MOMENTS = [
+  { id: 'join', emoji: '👋', title: 'Someone joins', where: 'Big screen, when a new player joins' },
+  { id: 'correct', emoji: '🎉', title: 'Right answer', where: 'Big screen, when everyone got the answer right' },
+  { id: 'wrong', emoji: '😮', title: 'Wrong answer', where: 'Big screen, with the names of everyone who got it wrong', hint: 'like "Oh no, Barka!"' },
+  { id: 'winner', emoji: '👑', title: 'Winner', where: 'Big screen, at the end of the game' },
+  { id: 'loser', emoji: '🐢', title: 'Last place', where: 'Big screen, a few seconds after the winner is shown' },
+]
 
 export const STATUS = {
   WAITING: 'waiting',

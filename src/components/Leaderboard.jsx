@@ -1,7 +1,9 @@
+import { avatarOf } from '../lib/avatars'
+
 const MEDALS = ['🥇', '🥈', '🥉']
 
 /**
- * entries: [{ id?, name, score, delta? }] — already sorted by score desc.
+ * entries: [{ id?, name, avatar?, score, delta? }] — already sorted by score desc.
  * Rows slide in one after another.
  */
 export default function Leaderboard({ entries, highlightId, limit = 10, title = 'Leaderboard', size = 'md' }) {
@@ -38,6 +40,7 @@ export default function Leaderboard({ entries, highlightId, limit = 10, title = 
                 <span className={`text-center tabular-nums ${big ? 'w-14' : 'w-9'} ${i === 0 ? 'inline-block animate-wiggle' : ''}`}>
                   {MEDALS[i] ?? i + 1}
                 </span>
+                <span className={big ? 'text-4xl' : 'text-2xl'}>{avatarOf(p)}</span>
                 <span className="flex-1 truncate">{p.name}</span>
                 {p.delta > 0 && <span className="animate-bounce text-green-600 tabular-nums">+{p.delta}</span>}
                 <span className="tabular-nums">{p.score ?? 0}</span>

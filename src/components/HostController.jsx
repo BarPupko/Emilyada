@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { deleteDoc, onSnapshot, updateDoc, writeBatch } from 'firebase/firestore'
+import { deleteDoc, doc, onSnapshot, serverTimestamp, updateDoc, writeBatch } from 'firebase/firestore'
 import { Link, useParams } from 'react-router-dom'
 import { db } from '../firebase'
 import {
@@ -7,6 +7,7 @@ import {
   STATUS,
   answerFor,
   gameRef,
+  historyCol,
   normalizeCode,
   playerRef,
   playersCol,
@@ -14,14 +15,17 @@ import {
   scoreField,
   timeMs,
 } from '../lib/game'
-import { sounds } from '../lib/sound'
+import { avatarOf } from '../lib/avatars'
+import { playClip, sounds } from '../lib/sound'
 import useCountdown from '../lib/useCountdown'
 import useGame from '../lib/useGame'
+import useMedia from '../lib/useMedia'
 import useQuestions from '../lib/useQuestions'
 import AnswerTile, { ANSWER_STYLES, Shape } from './AnswerTile'
-import { FloatingReactions, MuteButton, QrCode } from './Extras'
+import { FloatingReactions, MomentPopup, MuteButton, QrCode } from './Extras'
 import { Confetti, Dots, FunBackground, TimerBar } from './Fun'
 import Leaderboard from './Leaderboard'
+import PlayerBricks, { byNewest } from './PlayerBricks'
 
 export default function HostController() {
   const code = normalizeCode(useParams().code)
@@ -31,6 +35,8 @@ export default function HostController() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
   const revealedFor = useRef(-1)
+  const media = useMedia(code)
+  const [popup, setPopup] = useState(null)
 
   // Real-time listeners: one doc + one small collection. Firestore pushes deltas over a
   // single WebChannel stream, so updates land in well under 500ms even with ~50 players.
@@ -63,14 +69,51 @@ export default function HostController() {
   }, [secsLeft])
   useEffect(() => {
     if (status === STATUS.ACTIVE) sounds.start()
-    if (status === STATUS.REVEAL) sounds.correct()
-    if (status === STATUS.FINISHED) sounds.fanfare()
+    if (status === STATUS.REVEAL) {
+      // Custom moment on the big screen: "Oh no, …!" for wrong answers, or everyone got it.
+      const board = game.leaderboard ?? []
+      const missed = board.filter((e) => !e.delta)
+      const m = missed.length ? media.wrong : media.correct
+      if (board.length && (m?.sound || m?.picture)) {
+        if (!playClip(m.sound)) sounds.correct()
+        setPopup({
+          key: Date.now(),
+          picture: m.picture,
+          emoji: missed.length ? '😮' : '🎉',
+          text: missed.length ? `Oh no, ${nameList(missed)}!` : 'Everyone got it right! 🎉',
+          ms: 3500,
+        })
+      } else sounds.correct()
+    }
+    if (status !== STATUS.FINISHED) return
+    // Winner first; then, if the host set one up, the last-place moment ("Oh no, Barka!").
+    const winner = ranked[0]
+    const loser = ranked.length > 1 ? ranked[ranked.length - 1] : null
+    if (!playClip(media.winner?.sound)) sounds.fanfare()
+    if (winner && media.winner?.picture) {
+      setPopup({ key: Date.now(), picture: media.winner.picture, text: `👑 ${avatarOf(winner)} ${winner.name} wins!` })
+    }
+    const lm = media.loser
+    if (!loser || !(lm?.sound || lm?.picture)) return
+    const t = setTimeout(() => {
+      playClip(lm.sound)
+      setPopup({ key: Date.now(), picture: lm.picture, emoji: '🐢', text: `Oh no, ${avatarOf(loser)} ${loser.name}!` })
+    }, 4500)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, idx])
   const playerCount = players.length
   const prevCount = useRef(playerCount)
   useEffect(() => {
-    if (status === STATUS.WAITING && playerCount > prevCount.current) sounds.join()
+    if (status === STATUS.WAITING && playerCount > prevCount.current) {
+      if (!playClip(media.join?.sound)) sounds.join()
+      const newest = byNewest(players)[0]
+      if (newest && media.join?.picture) {
+        setPopup({ key: Date.now(), picture: media.join.picture, text: `${avatarOf(newest)} ${newest.name} joined!`, ms: 2500 })
+      }
+    }
     prevCount.current = playerCount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playerCount, status])
 
   const run = async (fn) => {
@@ -108,7 +151,7 @@ export default function HostController() {
         const a = answerFor(p, idx)
         if (a) counts[a.choice]++
         const correct = !!a && a.choice === question.correctAnswerIndex
-        if (correct && (!fastest || a.reactionMs < fastest.ms)) fastest = { name: p.name, ms: a.reactionMs }
+        if (correct && (!fastest || a.reactionMs < fastest.ms)) fastest = { name: p.name, avatar: avatarOf(p), ms: a.reactionMs }
         const points = a ? pointsFor(correct, a.reactionMs, total) : 0
         const streak = correct ? (p.streak ?? 0) + 1 : 0
         return { p, answered: !!a, correct, points, streak, score: (p[field] ?? 0) + points }
@@ -130,7 +173,8 @@ export default function HostController() {
       answerCounts: counts,
       playerCount: results.length,
       fastest,
-      leaderboard: results.slice(0, 5).map((r) => ({ id: r.p.id, name: r.p.name, score: r.score, delta: r.points })),
+      // Full ranking (not just the top 5) so every phone can show the whole scoreboard.
+      leaderboard: results.map((r) => ({ id: r.p.id, name: r.p.name, avatar: avatarOf(r.p), score: r.score, delta: r.points })),
     })
 
     try {
@@ -171,8 +215,22 @@ export default function HostController() {
       await batch.commit()
     })
 
-  const next = () =>
-    run(() => (idx + 1 < questions.length ? startQuestion(idx + 1) : updateDoc(gameRef(code), { status: STATUS.FINISHED })))
+  // Finishing a real game also saves the final scoreboard to the game's history.
+  const finish = () => {
+    const batch = writeBatch(db)
+    batch.update(gameRef(code), { status: STATUS.FINISHED })
+    if (!game.demo) {
+      batch.set(doc(historyCol(code)), {
+        title: game.title,
+        finishedAt: serverTimestamp(),
+        questionCount: questions.length,
+        players: ranked.map((p) => ({ name: p.name, avatar: avatarOf(p), score: p.score })),
+      })
+    }
+    return batch.commit()
+  }
+
+  const next = () => run(() => (idx + 1 < questions.length ? startQuestion(idx + 1) : finish()))
 
   const resetGame = (removePlayers) => {
     const msg = removePlayers ? 'Remove ALL players and reset the game?' : 'Reset all scores and go back to the lobby?'
@@ -207,6 +265,7 @@ export default function HostController() {
     <div className="relative min-h-dvh overflow-hidden text-white">
       <FunBackground />
       <FloatingReactions players={players} />
+      <MomentPopup popup={popup} />
       <header className="relative z-10 flex flex-wrap items-center gap-3 bg-black/20 px-6 py-3 backdrop-blur">
         <Link to="/" className="text-outline text-2xl font-bold tracking-wider">
           EMILYADA
@@ -232,6 +291,16 @@ export default function HostController() {
         {(status === STATUS.WAITING || status === STATUS.FINISHED) && (
           <Link to={`/host/${code}/edit`} className="rounded-lg bg-green-500 px-3 py-1 text-sm font-bold hover:brightness-110">
             ✏️ Edit questions &amp; pictures
+          </Link>
+        )}
+        {(status === STATUS.WAITING || status === STATUS.FINISHED) && (
+          <Link to={`/host/${code}/sounds`} className="rounded-lg bg-pink-500 px-3 py-1 text-sm font-bold hover:brightness-110">
+            🎵 Sounds &amp; pictures
+          </Link>
+        )}
+        {(status === STATUS.WAITING || status === STATUS.FINISHED) && (
+          <Link to={`/host/${code}/history`} className="rounded-lg bg-sky-500 px-3 py-1 text-sm font-bold hover:brightness-110">
+            📜 Saved games
           </Link>
         )}
         <button onClick={() => resetGame(false)} disabled={busy} className="rounded-lg bg-white/15 px-3 py-1 text-sm hover:bg-white/25">
@@ -263,24 +332,15 @@ export default function HostController() {
                 </p>
               </div>
             </div>
-            <div className="mb-10 flex min-h-24 max-w-4xl flex-wrap justify-center gap-3">
-              {players.length === 0 && (
-                <p className="text-2xl text-indigo-100">
-                  Waiting for players <Dots />
-                </p>
-              )}
-              {players.map((p, i) => (
-                <span
-                  key={p.id}
-                  className={`flex animate-bounce-in items-center gap-2 rounded-full bg-gradient-to-br ${ANSWER_STYLES[i % 4].grad} px-5 py-2 text-2xl font-semibold shadow-lg`}
-                >
-                  {p.name}
-                  <button onClick={() => kick(p.id)} title="Remove player" className="text-white/50 hover:text-white">
-                    ✕
-                  </button>
-                </span>
-              ))}
-            </div>
+            {players.length === 0 ? (
+              <p className="mb-10 text-2xl text-indigo-100">
+                Waiting for players <Dots />
+              </p>
+            ) : (
+              <div className="mb-10">
+                <PlayerBricks players={players} onKick={kick} />
+              </div>
+            )}
             {noQuestions ? (
               <Link to={`/host/${code}/edit`} className="rounded-2xl bg-green-500 px-10 py-4 text-2xl font-bold shadow-[0_6px_0_rgba(0,0,0,0.3)]">
                 ✏️ Add some questions first
@@ -337,7 +397,7 @@ export default function HostController() {
             <QuestionHeader question={question} />
             {game.fastest && (
               <p className="mx-auto mb-6 w-fit animate-bounce-in rounded-full bg-gradient-to-r from-yellow-300 to-amber-500 px-6 py-2 text-2xl font-bold text-indigo-950 shadow-xl">
-                ⚡ Fastest correct: {game.fastest.name} ({(game.fastest.ms / 1000).toFixed(1)}s)
+                ⚡ Fastest correct: {game.fastest.avatar} {game.fastest.name} ({(game.fastest.ms / 1000).toFixed(1)}s)
               </p>
             )}
             <div className="grid gap-8 lg:grid-cols-3">
@@ -384,6 +444,13 @@ export default function HostController() {
   )
 }
 
+// "Emily, Dan and 3 more"
+function nameList(entries) {
+  const names = entries.slice(0, 3).map((e) => `${avatarOf(e)} ${e.name}`)
+  const more = entries.length - names.length
+  return more > 0 ? `${names.join(', ')} and ${more} more` : names.join(' and ')
+}
+
 // "On fire" list: players with 3+ correct answers in a row.
 function Streaks({ players }) {
   const hot = players.filter((p) => (p.streak ?? 0) >= 3).sort((a, b) => b.streak - a.streak).slice(0, 4)
@@ -393,7 +460,7 @@ function Streaks({ players }) {
       <h3 className="mb-2 text-center text-xl font-bold">🔥 On fire!</h3>
       {hot.map((p) => (
         <p key={p.id} className="text-center text-lg">
-          {p.name} — {p.streak} in a row
+          {avatarOf(p)} {p.name} — {p.streak} in a row
         </p>
       ))}
     </div>
@@ -461,6 +528,7 @@ function Podium({ top }) {
           s.p && (
             <div key={s.place} className="flex w-44 animate-bounce-in flex-col items-center" style={{ animationDelay: s.delay }}>
               <span className={`text-6xl ${s.place === 1 ? 'animate-bounce' : ''}`}>{s.medal}</span>
+              <span className="animate-bob text-6xl">{avatarOf(s.p)}</span>
               <span className="text-outline mt-1 max-w-full truncate text-2xl font-bold">{s.p.name}</span>
               <span className="text-xl text-amber-200">{s.p.score} pts</span>
               <div

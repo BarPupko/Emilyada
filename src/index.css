@@ -18,6 +18,21 @@
   --animate-shine: shine 2.8s ease-in-out infinite;
   --animate-rise: rise 4s ease-out both;
   --animate-rise-small: rise-small 0.9s ease-out both;
+  --animate-brick-drop: brick-drop 0.8s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+  --animate-brick-bump: brick-bump 0.5s ease-out both;
+
+  /* lobby name bricks: the new one falls in, the rest get knocked about */
+  @keyframes brick-drop {
+    0% { opacity: 0; transform: translateY(-70vh) rotate(-14deg); }
+    70% { opacity: 1; transform: translateY(8px) rotate(3deg); }
+    100% { opacity: 1; transform: translateY(0) rotate(0); }
+  }
+  @keyframes brick-bump {
+    0% { transform: translateY(0) rotate(0); }
+    30% { transform: translateY(-10px) rotate(var(--tilt, 3deg)); }
+    60% { transform: translateY(3px) rotate(calc(var(--tilt, 3deg) * -0.5)); }
+    100% { transform: translateY(0) rotate(0); }
+  }
 
   @keyframes rise {
     0% { opacity: 0; transform: translateY(20px) scale(0.4); }

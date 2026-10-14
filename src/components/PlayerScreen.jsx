@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
-import { deleteDoc, doc, onSnapshot, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { deleteDoc, doc, getDocs, onSnapshot, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore'
 import { Link, useParams } from 'react-router-dom'
 import { DEFAULT_CODE, STATUS, answerFor, ensureDefaultGame, normalizeCode, playerRef, playersCol, saveLastCode, scoreField, timeMs } from '../lib/game'
+import { avatarOf, randomAvatar } from '../lib/avatars'
 import { sounds } from '../lib/sound'
 import useCountdown from '../lib/useCountdown'
 import useGame from '../lib/useGame'
@@ -10,6 +11,7 @@ import AnswerTile, { ANSWER_STYLES, Shape } from './AnswerTile'
 import { MuteButton, ReactionBar } from './Extras'
 import { Confetti, Dots, FunBackground, TimerBar } from './Fun'
 import Leaderboard from './Leaderboard'
+import PlayerBricks from './PlayerBricks'
 import PracticeGame from './PracticeGame'
 
 const NAME_KEY = 'bar-trivia-name'
@@ -39,6 +41,9 @@ export default function PlayerScreen() {
   const [error, setError] = useState(null)
   const [practice, setPractice] = useState(false)
   const { questions } = useQuestions(code)
+  const [lobby, setLobby] = useState([])
+  const [avatar, setAvatar] = useState(() => randomAvatar())
+  const takenAvatars = useRef([])
 
   // Each phone listens to just two documents (game + its own player doc), keeping
   // fan-out tiny so 50 phones don't each receive every other player's writes.
@@ -77,12 +82,40 @@ export default function PlayerScreen() {
   const myAnswer = (pending && pending.startedAt === game?.questionStartedAtMs ? pending : null) ?? answerFor(me, idx)
   const result = status === STATUS.REVEAL && me?.lastResult?.questionIndex === idx ? me.lastResult : null
 
+  // On the join screen, steer clear of avatars other players already have.
+  const joining = me === null
+  useEffect(() => {
+    if (!joining) return
+    getDocs(playersCol(code))
+      .then((s) => {
+        takenAvatars.current = s.docs.map((d) => d.data().avatar).filter(Boolean)
+        setAvatar((a) => (takenAvatars.current.includes(a) ? randomAvatar(takenAvatars.current) : a))
+      })
+      .catch(() => {})
+  }, [code, joining])
+  const rerollAvatar = () => {
+    sounds.pop()
+    setAvatar((a) => randomAvatar([...takenAvatars.current, a]))
+  }
+
   // If the real game starts while someone is practising, jump straight into it.
   useEffect(() => {
     if (me && (status === STATUS.ACTIVE || status === STATUS.REVEAL)) setPractice(false)
   }, [me, status])
 
-  // Sound + buzz when the result arrives.
+  // Everyone in the game, but only while waiting in the lobby — during play each phone
+  // sticks to two documents so answers don't fan out to every other phone.
+  const inLobby = !!me && status === STATUS.WAITING
+  useEffect(() => {
+    if (!inLobby) return
+    return onSnapshot(
+      playersCol(code),
+      (s) => setLobby(s.docs.map((d) => ({ id: d.id, ...d.data() }))),
+      () => {},
+    )
+  }, [code, inLobby])
+
+  // Sound + buzz when the result arrives. (Custom recordings and GIFs play on the big screen.)
   useEffect(() => {
     if (!result) return
     if (result.correct) sounds.correct()
@@ -99,6 +132,7 @@ export default function PlayerScreen() {
     try {
       await setDoc(playerRef(code, playerId), {
         name: n,
+        avatar,
         score: 0,
         streak: 0,
         answer: null,
@@ -168,7 +202,16 @@ export default function PlayerScreen() {
         <p className="mb-8 mt-2 animate-slide-up text-xl font-semibold text-amber-300" style={{ animationDelay: '0.2s' }}>
           {game.title}
         </p>
-        <MiniCard />
+        <div className="flex animate-pop-in flex-col items-center">
+          <button type="button" onClick={rerollAvatar} title="Pick another" className="animate-bob text-8xl drop-shadow-lg">
+            <span key={avatar} className="inline-block animate-bounce-in">
+              {avatar}
+            </span>
+          </button>
+          <button type="button" onClick={rerollAvatar} className="mt-2 rounded-full bg-white/20 px-5 py-2 text-lg font-semibold active:scale-95">
+            🎲 Pick another
+          </button>
+        </div>
         <form onSubmit={join} className="mt-8 flex w-full max-w-sm animate-slide-up flex-col gap-3" style={{ animationDelay: '0.4s' }}>
           <label className="text-xl font-semibold">Type your name:</label>
           <input
@@ -207,7 +250,9 @@ export default function PlayerScreen() {
   const footer = (
     <div className="mt-auto w-full pt-4">
       <div className="flex w-full items-center justify-between gap-2 text-base text-white/80">
-        <span className="rounded-full bg-white/15 px-3 py-1 font-semibold text-white">😀 {me.name}</span>
+        <span className="rounded-full bg-white/15 px-3 py-1 font-semibold text-white">
+          {avatarOf(me)} {me.name}
+        </span>
         {game.demo && status !== STATUS.WAITING && (
           <span className="rounded-full bg-amber-400 px-2 py-0.5 text-sm font-bold text-indigo-950">DEMO</span>
         )}
@@ -230,12 +275,18 @@ export default function PlayerScreen() {
     return (
       <Full>
         <TopBar code={code} />
-        <p className="animate-bounce text-7xl">🎉</p>
-        <h2 className="text-outline mt-2 animate-pop-in text-4xl font-bold">You&apos;re in, {me.name}!</h2>
+        <p className="animate-bounce text-8xl">{avatarOf(me)}</p>
+        <h2 className="text-outline mt-2 animate-pop-in text-4xl font-bold">You&apos;re in, {me.name}! 🎉</h2>
         <p className="mt-2 text-xl text-indigo-100">
           Waiting for the host to start <Dots />
         </p>
         <p className="mt-1 text-base text-white/70">The game will appear here by itself. No need to do anything.</p>
+        {lobby.length > 0 && (
+          <div className="mt-6 w-full">
+            <h3 className="mb-3 text-2xl font-bold">👥 Who&apos;s here ({lobby.length})</h3>
+            <PlayerBricks players={lobby} highlightId={playerId} size="sm" />
+          </div>
+        )}
         <div className="mt-6 w-full animate-slide-up rounded-3xl bg-white/10 p-5 text-left shadow-xl backdrop-blur" style={{ animationDelay: '0.2s' }}>
           <h3 className="mb-3 text-center text-2xl font-bold">How to play</h3>
           <ol className="space-y-3 text-xl">
@@ -366,6 +417,9 @@ export default function PlayerScreen() {
             {game.playerCount ? ` of ${game.playerCount}` : ''}
           </p>
         )}
+        <div className="mt-5 w-full">
+          <Leaderboard entries={game.leaderboard ?? []} highlightId={playerId} limit={10} title="🏆 Scoreboard" />
+        </div>
         {reactions}
         {footer}
       </Full>
@@ -386,7 +440,7 @@ export default function PlayerScreen() {
         )}
         {game.demo && <p className="mb-4 text-lg text-white/80">That was practice — the real game is next!</p>}
         <div className="w-full max-w-sm">
-          <Leaderboard entries={entries} highlightId={playerId} limit={5} title="Top 5" />
+          <Leaderboard entries={entries} highlightId={playerId} limit={100} title="🏆 Final scoreboard" />
         </div>
         {reactions}
         {footer}
