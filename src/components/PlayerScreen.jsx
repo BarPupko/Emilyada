@@ -57,6 +57,8 @@ export default function PlayerScreen() {
     }
   })
 
+  useFullscreenOnTap()
+
   useEffect(() => {
     if (code === DEFAULT_CODE) ensureDefaultGame().catch(() => {})
     saveLastCode(code)
@@ -196,7 +198,7 @@ export default function PlayerScreen() {
 
   if (me === null) {
     return (
-      <Full>
+      <Full top>
         <TopBar code={code} />
         <h1 className="text-outline animate-bounce-in text-5xl font-bold tracking-wider">EMILYADA</h1>
         <p className="mb-8 mt-2 animate-slide-up text-xl font-semibold text-amber-300" style={{ animationDelay: '0.2s' }}>
@@ -273,7 +275,7 @@ export default function PlayerScreen() {
 
   if (status === STATUS.WAITING) {
     return (
-      <Full>
+      <Full top>
         <TopBar code={code} />
         <p className="animate-bounce text-8xl">{avatarOf(me)}</p>
         <h2 className="text-outline mt-2 animate-pop-in text-4xl font-bold">You&apos;re in, {me.name}! 🎉</h2>
@@ -459,9 +461,10 @@ export default function PlayerScreen() {
 }
 
 // Full-screen page with the animated background. Pass `bg` to replace it with a solid colour.
-function Full({ children, bg }) {
+// `top`: leave room for the TopBar pinned above it.
+function Full({ children, bg, top }) {
   return (
-    <div className={`relative flex min-h-dvh flex-col items-center justify-center overflow-hidden p-6 text-center text-white ${bg ?? ''}`}>
+    <div className={`relative flex min-h-dvh flex-col items-center justify-center overflow-hidden p-6 text-center text-white ${top ? 'pt-20' : ''} ${bg ?? ''}`}>
       {bg ? <FunBackground className="opacity-60" /> : <FunBackground />}
       <div className="relative z-10 flex w-full max-w-md flex-1 flex-col items-center justify-center">{children}</div>
     </div>
@@ -481,6 +484,24 @@ function MiniCard() {
       </div>
     </div>
   )
+}
+
+// On a phone, go fullscreen (no address bar) at the first tap - browsers only allow it
+// after one - and again after a tap if the phone dropped out of it (e.g. switching apps).
+// iPhones don't support fullscreen for pages, so there it does nothing.
+function useFullscreenOnTap() {
+  useEffect(() => {
+    const el = document.documentElement
+    if (!el.requestFullscreen || !matchMedia('(pointer: coarse)').matches) return
+    const go = () => {
+      if (!document.fullscreenElement) el.requestFullscreen({ navigationUI: 'hide' }).catch(() => {})
+    }
+    addEventListener('click', go)
+    return () => {
+      removeEventListener('click', go)
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {})
+    }
+  }, [])
 }
 
 // Mute toggle + game code + way into the host screen (which asks for the host key).
