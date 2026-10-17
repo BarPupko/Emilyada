@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { DEFAULT_CODE, ensureDefaultGame, normalizeCode } from '../lib/game'
+import { sameKeys } from '../lib/keyboard'
 import useGame from '../lib/useGame'
 import { Dots, FunBackground } from './Fun'
 
@@ -30,7 +31,8 @@ export default function HostGate({ children }) {
 
   const submit = (e) => {
     e.preventDefault()
-    if (pin.trim() === game?.hostKey) {
+    // any case, and typed with the keyboard on Hebrew or Russian too (קצןךט2026 = emily2026)
+    if (game?.hostKey && sameKeys(pin, game.hostKey)) {
       rememberHost(code, game.hostKey)
       setOk(true)
     } else {

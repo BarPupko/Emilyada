@@ -1,6 +1,7 @@
 import { collection, doc, getDoc, getDocs, orderBy, query, serverTimestamp, writeBatch } from 'firebase/firestore'
 import { db } from '../firebase'
 import quiz from '../data/questions.json'
+import { toLatinKeys } from './keyboard'
 
 // Firestore layout — every game ("room") lives under its own code, so many games can run at once:
 //   games/{code}                      -> { title, hostKey, questionTimeSec, createdAt,
@@ -55,7 +56,8 @@ export const LOBBY_STATE = {
   fastest: null,
 }
 
-export const normalizeCode = (code) => (code ?? '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '')
+// Any case, and a code typed with the keyboard on Hebrew/Russian (קצןךט = EMILY) works too.
+export const normalizeCode = (code) => toLatinKeys(code).trim().toUpperCase().replace(/[^A-Z0-9]/g, '')
 export const timeMs = (game) => (game?.questionTimeSec ?? DEFAULT_TIME_SEC) * 1000
 
 // Kahoot-style: correct answers earn 500–1000 points, faster = more.
