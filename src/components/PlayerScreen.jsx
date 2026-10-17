@@ -244,6 +244,7 @@ export default function PlayerScreen() {
         <Link to="/" className="mt-4 text-white/70 underline">
           Different game code?
         </Link>
+        <HomeScreenTip />
         <ErrorText error={error} />
       </Full>
     )
@@ -502,6 +503,19 @@ function useFullscreenOnTap() {
       if (document.fullscreenElement) document.exitFullscreen().catch(() => {})
     }
   }, [])
+}
+
+// iPhones can't take a page fullscreen; added to the home screen it opens without the
+// address bar. Shown only in Safari on an iPhone/iPad, not once opened from the icon.
+const IOS = /iP(hone|od|ad)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+function HomeScreenTip() {
+  if (!IOS || navigator.standalone) return null
+  return (
+    <p className="mt-6 max-w-sm rounded-2xl bg-white/10 px-4 py-3 text-base text-white/90">
+      📲 Full screen on iPhone: tap <b>Share</b> <span aria-hidden="true">⬆️</span> then <b>Add to Home Screen</b>, and open
+      the game from its icon.
+    </p>
+  )
 }
 
 // Mute toggle + game code + way into the host screen (which asks for the host key).

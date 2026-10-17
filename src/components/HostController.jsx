@@ -263,6 +263,7 @@ export default function HostController() {
 
   const joinUrl = `${window.location.origin}${import.meta.env.BASE_URL}play/${code}`
   const noQuestions = questionsLoaded && questions.length === 0
+  const inGame = (status === STATUS.ACTIVE || status === STATUS.REVEAL) && !!question
 
   return (
     <div className="relative min-h-dvh overflow-hidden text-white">
@@ -315,7 +316,20 @@ export default function HostController() {
         <MuteButton />
       </header>
 
-      <main className="relative z-10 mx-auto max-w-6xl px-6 py-8">
+      <main
+        className={`relative z-10 mx-auto px-6 py-8 ${
+          inGame ? 'max-w-7xl lg:grid lg:grid-cols-[12rem_minmax(0,1fr)] lg:items-start lg:gap-8' : 'max-w-6xl'
+        }`}
+      >
+        {/* Mid-game, latecomers can still join: the QR stays on the left of the big screen. */}
+        {inGame && (
+          <aside className="sticky top-6 hidden animate-slide-up flex-col items-center gap-2 rounded-3xl bg-white/10 p-4 text-center lg:flex">
+            <p className="text-2xl font-bold text-amber-300">Join now!</p>
+            <QrCode url={joinUrl} size={160} />
+            <p className="text-sm text-indigo-100">or type the code</p>
+            <p className="rounded-xl bg-white px-3 py-1 font-mono text-2xl font-bold tracking-widest text-indigo-950">{code}</p>
+          </aside>
+        )}
         <ErrorBox error={error ?? gameError} />
 
         {status === STATUS.WAITING && (
