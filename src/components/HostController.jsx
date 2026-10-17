@@ -70,17 +70,20 @@ export default function HostController() {
   useEffect(() => {
     if (status === STATUS.ACTIVE) sounds.start()
     if (status === STATUS.REVEAL) {
-      // Custom moment on the big screen: "Oh no, …!" for wrong answers, or everyone got it.
+      // Custom moment on the big screen: "Oh no, …!" for those who picked a wrong answer,
+      // else the right-answer one. Players who didn't answer (an idle phone) don't count.
+      // (Boards from before `answered` was stored: a 0 counts as wrong, as it used to.)
       const board = game.leaderboard ?? []
-      const missed = board.filter((e) => !e.delta)
+      const missed = board.filter((e) => !e.delta && (e.answered ?? true))
+      const anyRight = board.some((e) => e.delta > 0)
       const m = missed.length ? media.wrong : media.correct
-      if (board.length && (m?.sound || m?.picture)) {
+      if ((missed.length || anyRight) && (m?.sound || m?.picture)) {
         if (!playClip(m.sound)) sounds.correct()
         setPopup({
           key: Date.now(),
           picture: m.picture,
           emoji: missed.length ? '😮' : '🎉',
-          text: missed.length ? `Oh no, ${nameList(missed)}!` : 'Everyone got it right! 🎉',
+          text: missed.length ? `Oh no, ${nameList(missed)}!` : board.every((e) => e.delta > 0) ? 'Everyone got it right! 🎉' : 'Good answer! 🎉',
           ms: 3500,
         })
       } else sounds.correct()
@@ -174,7 +177,7 @@ export default function HostController() {
       playerCount: results.length,
       fastest,
       // Full ranking (not just the top 5) so every phone can show the whole scoreboard.
-      leaderboard: results.map((r) => ({ id: r.p.id, name: r.p.name, avatar: avatarOf(r.p), score: r.score, delta: r.points })),
+      leaderboard: results.map((r) => ({ id: r.p.id, name: r.p.name, avatar: avatarOf(r.p), score: r.score, delta: r.points, answered: r.answered })),
     })
 
     try {
