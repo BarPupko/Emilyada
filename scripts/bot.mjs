@@ -3,14 +3,15 @@
 //
 //   node scripts/bot.mjs join   <CODE> <NAME>          join the game
 //   node scripts/bot.mjs next   <CODE> <NAME>          wait for the next question (or the end)
-//   node scripts/bot.mjs answer <CODE> <NAME> <0-3>    answer the current question
+//   node scripts/bot.mjs answer <CODE> <NAME> <0-3> [N] answer the current question (N = the question
+//                                                       number from `next`: refused if that one is over)
 //   node scripts/bot.mjs react  <CODE> <NAME> <EMOJI>  send 😀 😂 😍 😮 👏 🔥 to the big screen
 //
 // Every command prints one line of JSON.
 import { getDoc, getDocs, onSnapshot, orderBy, query, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore'
 import { COLORS, botId, connect, refs } from './fb.mjs'
 
-const [cmd, rawCode, name, arg] = process.argv.slice(2)
+const [cmd, rawCode, name, arg, forQuestion] = process.argv.slice(2)
 const code = (rawCode ?? '').toUpperCase()
 const out = (obj) => {
   console.log(JSON.stringify(obj))
@@ -39,6 +40,7 @@ async function join() {
     rank: null,
     reaction: null,
     joinedAt: serverTimestamp(),
+    lastSeen: serverTimestamp(),
   })
   out({ ok: true, joined: code, name, status: g.data().status })
 }
@@ -78,6 +80,11 @@ async function next() {
     if (Date.now() > deadline) out({ type: 'timeout', status: game.status })
   }
 
+  // like an open phone: check in while waiting, so the big screen doesn't show us as away
+  const beat = () => updateDoc(r.player(id), { lastSeen: serverTimestamp() }).catch(() => {})
+  beat()
+  setInterval(beat, 20_000)
+
   onSnapshot(r.game, (s) => {
     game = s.data()
     check()
@@ -94,10 +101,13 @@ async function answer() {
   const choice = Number(arg)
   if (![0, 1, 2, 3].includes(choice)) out({ error: 'choice must be 0, 1, 2 or 3' })
   const g = (await getDoc(r.game)).data()
-  if (g?.status !== 'active') out({ error: `no live question (status: ${g?.status})` })
+  if (g?.status !== 'active') out({ error: `no live question (status: ${g?.status})`, tooLate: true })
+  if (forQuestion && Number(forQuestion) !== g.currentQuestionIndex + 1)
+    out({ error: `question ${forQuestion} is over - question ${g.currentQuestionIndex + 1} is live now, run next`, tooLate: true })
   const reactionMs = Date.now() - g.questionStartedAtMs
   await updateDoc(r.player(id), {
     answer: { questionIndex: g.currentQuestionIndex, choice, reactionMs, sentAtMs: Date.now() },
+    lastSeen: serverTimestamp(),
   })
   out({ ok: true, question: g.currentQuestionIndex + 1, choice, color: COLORS[choice], seconds: +(reactionMs / 1000).toFixed(1) })
 }

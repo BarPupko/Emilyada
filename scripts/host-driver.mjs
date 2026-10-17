@@ -4,6 +4,8 @@
 //
 //   node scripts/host-driver.mjs <CODE> <HOST_KEY> <EXPECTED_PLAYERS> [joinWaitSec=300] [revealPauseSec=4]
 //
+// FFMPEG=<path to ffmpeg> also records the big screen to test-results/<CODE>/gameplay.webm.
+//
 // Needs the dev server running (npm run dev). Writes test-results/<CODE>/REPORT.md + screenshots.
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -71,6 +73,7 @@ const click = (text) =>
   }, text)
 const shot = (name) => page.screenshot({ path: join(outDir, `${name}.png`) })
 
+const recorder = process.env.FFMPEG ? await page.screencast({ path: join(outDir, 'gameplay.webm'), ffmpegPath: process.env.FFMPEG }) : null
 await page.goto(`${BASE}/host/${code}`, { waitUntil: 'networkidle2' })
 await page.waitForSelector('input[type=password]', { timeout: 30000 })
 await page.type('input[type=password]', hostKey)
@@ -173,5 +176,9 @@ writeFileSync(
 )
 log(`done — report at test-results/${code}/REPORT.md`)
 log(`winner: ${ranked[0]?.name} (${ranked[0]?.score})`)
+if (recorder) {
+  await recorder.stop()
+  log(`recording at test-results/${code}/gameplay.webm`)
+}
 await browser.close()
 process.exit(0)
