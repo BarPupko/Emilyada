@@ -46,8 +46,8 @@ export default function AnswerTile({ index, label, image, onClick, disabled, sta
           disabled={onClick ? disabled : undefined}
           aria-label={`${style.name}: ${label}`}
           className={`bg-gradient-to-br ${style.grad} ${stateClass} group relative flex flex-1 overflow-hidden rounded-3xl text-left font-semibold text-white shadow-[0_8px_0_rgba(0,0,0,0.28)] transition-all duration-200 select-none touch-manipulation ${
-            image ? 'flex-col items-center justify-center gap-2 p-3 text-center' : 'items-center'
-          } ${lg ? `min-h-36 ${image ? '' : 'gap-5 p-6'} text-3xl` : `min-h-28 ${image ? '' : 'gap-3 p-4'} text-xl`}`}
+            image ? 'flex-col items-center justify-center gap-2 p-2 text-center sm:flex-row sm:justify-start sm:gap-3 sm:text-left' : 'items-center'
+          } ${lg ? `min-h-20 sm:min-h-28 ${image ? 'sm:p-3' : 'gap-3 p-3 sm:gap-5 sm:p-5'} text-lg sm:text-2xl lg:text-3xl` : `min-h-24 ${image ? '' : 'gap-3 p-4'} text-lg`}`}
         >
           {/* moving shine */}
           {playful && (
@@ -58,21 +58,23 @@ export default function AnswerTile({ index, label, image, onClick, disabled, sta
           )}
           {image ? (
             <>
-              <img src={image} alt="" className={`${lg ? 'max-h-40' : 'max-h-24'} w-auto rounded-xl object-contain shadow-md`} />
-              <span className="flex items-center gap-2">
-                <Shape shape={style.shape} className={`${lg ? 'h-8 w-8' : 'h-5 w-5'} ${playful ? 'animate-wiggle' : ''}`} />
+              {/* small picture beside the answer, like Kahoot - keeps all four on one screen */}
+              <img src={image} alt="" className={`${lg ? 'h-14 sm:h-24' : 'h-14'} aspect-square shrink-0 rounded-xl bg-white object-contain shadow-md`} />
+              <span className="flex min-w-0 items-center gap-2">
+                <Shape shape={style.shape} className={`${lg ? 'h-5 w-5 sm:h-8 sm:w-8' : 'h-5 w-5'} ${playful ? 'animate-wiggle' : ''}`} />
                 <span className="leading-tight [text-shadow:0_2px_2px_rgba(0,0,0,0.35)]">{label}</span>
               </span>
             </>
           ) : (
             <>
-              <Shape shape={style.shape} className={`${lg ? 'h-16 w-16' : 'h-10 w-10'} ${playful ? 'animate-wiggle' : ''}`} />
+              <Shape shape={style.shape} className={`${lg ? 'h-8 w-8 sm:h-14 sm:w-14' : 'h-10 w-10'} ${playful ? 'animate-wiggle' : ''}`} />
               <span className="flex-1 leading-tight [text-shadow:0_2px_2px_rgba(0,0,0,0.35)]">{label}</span>
             </>
           )}
-          {state === 'correct' && <span className="absolute right-3 top-2 text-4xl">✅</span>}
+          {state === 'correct' && <span className="absolute right-2 top-1 text-2xl sm:right-3 sm:top-2 sm:text-4xl">✅</span>}
           {typeof count === 'number' && (
-            <span className="absolute bottom-2 right-3 rounded-full bg-black/30 px-3 py-1 text-xl tabular-nums">{count}</span>
+            // top corner on phones, so it doesn't sit on the answer text
+            <span className="absolute left-2 top-2 rounded-full bg-black/30 px-2 py-0.5 text-sm tabular-nums sm:left-auto sm:top-auto sm:bottom-2 sm:right-3 sm:px-3 sm:py-1 sm:text-xl">{count}</span>
           )}
         </Tag>
       </div>

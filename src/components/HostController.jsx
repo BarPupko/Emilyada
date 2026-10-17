@@ -371,18 +371,18 @@ export default function HostController() {
         {status === STATUS.ACTIVE && question && (
           <div key={`active-${idx}`}>
             <QuestionHeader question={question} />
-            <div className="mx-auto mb-8 flex max-w-4xl items-center gap-8">
+            <div className="mx-auto mb-4 flex max-w-4xl items-center gap-4 sm:mb-8 sm:gap-8">
               <div className="flex-1">
                 <TimerBar remaining={remaining} total={total} />
               </div>
               <div className="text-center">
-                <div key={answeredCount} className="animate-pop-in text-5xl font-bold tabular-nums">
+                <div key={answeredCount} className="animate-pop-in text-3xl font-bold tabular-nums sm:text-5xl">
                   {answeredCount}/{players.length}
                 </div>
                 <div className="text-indigo-100">answered</div>
               </div>
             </div>
-            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+            <div className="grid grid-cols-2 gap-2 sm:gap-5">
               {question.options.map((opt, i) => (
                 <AnswerTile key={i} index={i} label={opt} image={question.optionImages?.[i]} size="lg" />
               ))}
@@ -400,12 +400,12 @@ export default function HostController() {
           <div key={`reveal-${idx}`}>
             <QuestionHeader question={question} />
             {game.fastest && (
-              <p className="mx-auto mb-6 w-fit animate-bounce-in rounded-full bg-gradient-to-r from-yellow-300 to-amber-500 px-6 py-2 text-2xl font-bold text-indigo-950 shadow-xl">
+              <p className="mx-auto mb-4 w-fit animate-bounce-in rounded-full bg-gradient-to-r from-yellow-300 to-amber-500 px-4 py-1 text-base font-bold sm:mb-6 sm:px-6 sm:py-2 sm:text-2xl text-indigo-950 shadow-xl">
                 ⚡ Fastest correct: {game.fastest.avatar} {game.fastest.name} ({(game.fastest.ms / 1000).toFixed(1)}s)
               </p>
             )}
             <div className="grid gap-8 lg:grid-cols-3">
-              <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:col-span-2">
+              <div className="grid grid-cols-2 gap-2 sm:gap-5 lg:col-span-2">
                 {question.options.map((opt, i) => (
                   <AnswerTile
                     key={i}
@@ -507,10 +507,10 @@ function QuestionHeader({ question }) {
         <img
           src={question.image}
           alt=""
-          className="mx-auto mb-6 max-h-72 animate-bounce-in rounded-3xl object-contain shadow-2xl ring-8 ring-white/40"
+          className="mx-auto mb-4 max-h-36 animate-bounce-in rounded-3xl object-contain shadow-2xl ring-4 ring-white/40 sm:mb-6 sm:max-h-72 sm:ring-8"
         />
       )}
-      <h2 className="mx-auto mb-8 max-w-5xl animate-pop-in rounded-3xl bg-white px-8 py-6 text-center text-4xl font-bold text-indigo-950 shadow-2xl">
+      <h2 className="mx-auto mb-4 max-w-5xl animate-pop-in rounded-3xl bg-white px-4 py-3 text-center text-xl font-bold text-indigo-950 shadow-2xl sm:mb-8 sm:px-8 sm:py-6 sm:text-4xl">
         {question.text}
       </h2>
     </>
