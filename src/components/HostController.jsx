@@ -24,6 +24,7 @@ import useMedia from '../lib/useMedia'
 import useQuestions from '../lib/useQuestions'
 import AnswerTile, { ANSWER_STYLES, Shape } from './AnswerTile'
 import { FloatingReactions, MomentPopup, MuteButton, QrCode } from './Extras'
+import LiveCamera, { CameraButton, useCameraSetting } from './LiveCamera'
 import { Confetti, Dots, FunBackground, TimerBar } from './Fun'
 import Leaderboard from './Leaderboard'
 import PlayerBricks, { byNewest } from './PlayerBricks'
@@ -50,6 +51,8 @@ export default function HostController() {
       ),
     [code],
   )
+
+  const [cam, updateCam] = useCameraSetting()
 
   // Re-check who is away every few seconds (their heartbeats stop arriving).
   const [now, setNow] = useState(Date.now)
@@ -287,6 +290,7 @@ export default function HostController() {
       <FunBackground />
       <FloatingReactions players={players} />
       <MomentPopup popup={popup} />
+      <LiveCamera cam={cam} update={updateCam} />
       <header className="relative z-10 flex flex-wrap items-center gap-3 bg-black/20 px-6 py-3 backdrop-blur">
         <Link to="/" className="text-outline text-2xl font-bold tracking-wider">
           EMILYADA
@@ -333,6 +337,7 @@ export default function HostController() {
         <button onClick={() => resetGame(true)} disabled={busy} className="rounded-lg bg-red-500/40 px-3 py-1 text-sm hover:bg-red-500/60">
           Clear players
         </button>
+        <CameraButton cam={cam} update={updateCam} />
         <MuteButton />
       </header>
 
