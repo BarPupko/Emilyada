@@ -68,6 +68,16 @@ export function pointsFor(correct, reactionMs, totalMs) {
 // Demo rounds tally into a separate field so real scores are never touched.
 export const scoreField = (game) => (game?.demo ? 'demoScore' : 'score')
 
+// Presence: an open phone stamps `lastSeen` every HEARTBEAT_MS. A player not seen for
+// AWAY_MS has closed the page (or lost signal); they stay in the game with their score,
+// so reopening the page on the same phone carries on where they left off.
+export const HEARTBEAT_MS = 20_000
+export const AWAY_MS = 60_000
+export const isAway = (player, now = Date.now()) => {
+  const seen = player?.lastSeen?.toMillis?.()
+  return !seen || now - seen > AWAY_MS
+}
+
 export function answerFor(player, questionIndex) {
   return player?.answer && player.answer.questionIndex === questionIndex ? player.answer : null
 }

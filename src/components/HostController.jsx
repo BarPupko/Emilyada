@@ -7,6 +7,7 @@ import {
   STATUS,
   answerFor,
   gameRef,
+  isAway,
   historyCol,
   normalizeCode,
   playerRef,
@@ -49,6 +50,15 @@ export default function HostController() {
       ),
     [code],
   )
+
+  // Re-check who is away every few seconds (their heartbeats stop arriving).
+  const [now, setNow] = useState(Date.now)
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 5000)
+    return () => clearInterval(t)
+  }, [])
+  const away = players.filter((p) => isAway(p, now))
+  const here = players.length - away.length
 
   const status = game?.status
   const idx = game?.currentQuestionIndex ?? 0
@@ -191,10 +201,12 @@ export default function HostController() {
   // Auto-reveal when the timer runs out or every player has answered.
   useEffect(() => {
     if (status !== STATUS.ACTIVE) return
-    const everyoneAnswered = players.length > 0 && answeredCount >= players.length
+    // A player who is away doesn't hold the round up (an answer from them still counts).
+    const waitingFor = players.filter((p) => !answerFor(p, idx) && !isAway(p)).length
+    const everyoneAnswered = answeredCount > 0 && waitingFor === 0
     if (remaining === 0 || everyoneAnswered) run(reveal)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, remaining === 0, answeredCount, players.length])
+  }, [status, remaining === 0, answeredCount, players.length, here])
 
   // Clears every player's round data; `extra` resets a score field too.
   const resetPlayers = (batch, extra = {}) =>
@@ -249,6 +261,14 @@ export default function HostController() {
   }
 
   const kick = (id) => run(() => deleteDoc(playerRef(code, id)))
+  const removeAway = () => {
+    if (!confirm(`Remove ${away.length} away player${away.length > 1 ? 's' : ''} and their scores?`)) return
+    run(async () => {
+      const batch = writeBatch(db)
+      away.forEach((p) => batch.delete(playerRef(code, p.id)))
+      await batch.commit()
+    })
+  }
 
   if (!game) {
     return (
@@ -281,7 +301,10 @@ export default function HostController() {
             DEMO — points don&apos;t count
           </span>
         )}
-        <span className="ml-auto rounded-full bg-white/15 px-3 py-1 text-sm">👥 {players.length} players</span>
+        <span className="ml-auto rounded-full bg-white/15 px-3 py-1 text-sm" title="Away = their phone closed the game">
+          👥 {here} {here === 1 ? 'player' : 'players'}
+          {away.length > 0 && <span className="text-indigo-200"> · 💤 {away.length} away</span>}
+        </span>
         {status !== STATUS.WAITING && status !== STATUS.FINISHED && (
           <span className="rounded-full bg-white/15 px-3 py-1 text-sm">
             Question {idx + 1} / {questions.length}
@@ -355,7 +378,15 @@ export default function HostController() {
               </p>
             ) : (
               <div className="mb-10">
-                <PlayerBricks players={players} onKick={kick} />
+                <PlayerBricks players={players} onKick={kick} away={new Set(away.map((p) => p.id))} />
+                {away.length > 0 && (
+                  <p className="mt-4 text-indigo-100">
+                    💤 Away: their phone closed the game. They keep their score and come back when they reopen it.{' '}
+                    <button onClick={removeAway} disabled={busy} className="underline hover:text-white">
+                      Remove away players
+                    </button>
+                  </p>
+                )}
               </div>
             )}
             {noQuestions ? (
@@ -391,7 +422,7 @@ export default function HostController() {
               </div>
               <div className="text-center">
                 <div key={answeredCount} className="animate-pop-in text-3xl font-bold tabular-nums sm:text-5xl">
-                  {answeredCount}/{players.length}
+                  {answeredCount}/{Math.max(here, answeredCount)}
                 </div>
                 <div className="text-indigo-100">answered</div>
               </div>

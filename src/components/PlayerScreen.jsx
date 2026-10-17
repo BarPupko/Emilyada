@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { deleteDoc, doc, getDocs, onSnapshot, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore'
 import { Link, useParams } from 'react-router-dom'
-import { DEFAULT_CODE, STATUS, answerFor, ensureDefaultGame, normalizeCode, playerRef, playersCol, saveLastCode, scoreField, timeMs } from '../lib/game'
+import { DEFAULT_CODE, HEARTBEAT_MS, STATUS, answerFor, ensureDefaultGame, normalizeCode, playerRef, playersCol, saveLastCode, scoreField, timeMs } from '../lib/game'
 import { avatarOf, randomAvatar } from '../lib/avatars'
 import { sounds } from '../lib/sound'
 import useCountdown from '../lib/useCountdown'
@@ -58,6 +58,22 @@ export default function PlayerScreen() {
   })
 
   useFullscreenOnTap()
+
+  // Heartbeat while this phone has the game open, so the big screen knows who is still here.
+  const joined = !!me
+  useEffect(() => {
+    if (!joined) return
+    const beat = () => {
+      if (document.visibilityState === 'visible') updateDoc(playerRef(code, playerId), { lastSeen: serverTimestamp() }).catch(() => {})
+    }
+    beat()
+    const t = setInterval(beat, HEARTBEAT_MS)
+    document.addEventListener('visibilitychange', beat)
+    return () => {
+      clearInterval(t)
+      document.removeEventListener('visibilitychange', beat)
+    }
+  }, [joined, code, playerId])
 
   useEffect(() => {
     if (code === DEFAULT_CODE) ensureDefaultGame().catch(() => {})
@@ -142,6 +158,7 @@ export default function PlayerScreen() {
         rank: null,
         reaction: null,
         joinedAt: serverTimestamp(),
+        lastSeen: serverTimestamp(),
       })
       sounds.join()
     } catch (err) {
