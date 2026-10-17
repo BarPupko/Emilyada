@@ -517,16 +517,16 @@ function Title({ title }) {
 function QuestionHeader({ question }) {
   return (
     <>
+      <h2 className="mx-auto mb-4 max-w-5xl animate-pop-in rounded-3xl bg-white px-4 py-3 text-center text-xl font-bold text-indigo-950 shadow-2xl sm:mb-6 sm:px-8 sm:py-6 sm:text-4xl">
+        {question.text}
+      </h2>
       {question.image && (
         <img
           src={question.image}
           alt=""
-          className="mx-auto mb-4 max-h-36 animate-bounce-in rounded-3xl object-contain shadow-2xl ring-4 ring-white/40 sm:mb-6 sm:max-h-72 sm:ring-8"
+          className="mx-auto mb-4 max-h-36 animate-bounce-in rounded-3xl object-contain shadow-2xl ring-4 ring-white/40 sm:max-h-[20vh] sm:ring-8"
         />
       )}
-      <h2 className="mx-auto mb-4 max-w-5xl animate-pop-in rounded-3xl bg-white px-4 py-3 text-center text-xl font-bold text-indigo-950 shadow-2xl sm:mb-8 sm:px-8 sm:py-6 sm:text-4xl">
-        {question.text}
-      </h2>
     </>
   )
 }

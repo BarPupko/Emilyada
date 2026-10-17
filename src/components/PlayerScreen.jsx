@@ -357,18 +357,19 @@ export default function PlayerScreen() {
             <p className="mb-2 rounded-xl bg-amber-400 py-1 text-center text-base font-bold text-indigo-950">DEMO ROUND — points don&apos;t count</p>
           )}
           <TimerBar remaining={remaining} total={total} />
+          <p key={`q${idx}`} className="text-outline my-3 animate-pop-in text-center text-2xl font-semibold leading-snug">
+            {question.text}
+          </p>
           {question.image && (
             <img
               key={`img${idx}`}
               src={question.image}
               alt=""
-              className="mt-3 max-h-40 animate-pop-in self-center rounded-2xl object-contain shadow-xl ring-4 ring-white/40"
+              className="mb-3 max-h-[18dvh] animate-pop-in self-center rounded-2xl object-contain shadow-xl ring-4 ring-white/40"
             />
           )}
-          <p key={`q${idx}`} className="text-outline my-3 animate-pop-in text-center text-2xl font-semibold leading-snug">
-            {question.text}
-          </p>
-          <p className="mb-2 animate-bounce text-center text-lg text-amber-300">👇 Tap your answer</p>
+          {/* a question with a picture has no room for the hint on a small phone */}
+          {!question.image && <p className="mb-2 animate-bounce text-center text-lg text-amber-300">👇 Tap your answer</p>}
           <div key={`a${idx}`} className="grid flex-1 grid-cols-2 grid-rows-2 gap-3">
             {question.options.map((opt, i) => (
               <AnswerTile key={i} index={i} label={opt} image={question.optionImages?.[i]} onClick={() => answer(i)} />
