@@ -27,7 +27,8 @@ export default function AnswerTile({ index, label, image, onClick, disabled, sta
   const playful = state === 'idle'
 
   const stateClass = {
-    idle: 'hover:brightness-110 active:scale-90',
+    // only a phone's tiles take taps; the big screen's are just a display
+    idle: onClick ? 'hover:brightness-110 active:scale-90' : '',
     selected: `ring-8 ${style.ring} scale-[1.03]`,
     correct: 'ring-8 ring-white scale-[1.04] animate-heartbeat',
     wrong: 'opacity-30 grayscale scale-95',

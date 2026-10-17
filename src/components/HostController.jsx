@@ -384,7 +384,8 @@ export default function HostController() {
                 <AnswerTile key={i} index={i} label={opt} image={question.optionImages?.[i]} size="lg" />
               ))}
             </div>
-            <div className="mt-8 text-center">
+            <p className="mt-4 text-center text-lg text-indigo-100">📱 Players answer on their phones</p>
+            <div className="mt-6 text-center">
               <BigButton onClick={() => run(reveal)} disabled={busy}>
                 Reveal answer now
               </BigButton>
