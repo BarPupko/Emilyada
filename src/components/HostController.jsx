@@ -198,15 +198,12 @@ export default function HostController() {
     }
   }
 
-  // Auto-reveal when the timer runs out or every player has answered.
+  // Reveal when the timer runs out - not as soon as everyone has answered, so latecomers
+  // and slow thinkers get the whole time. The host can still press "Reveal answer now".
   useEffect(() => {
-    if (status !== STATUS.ACTIVE) return
-    // A player who is away doesn't hold the round up (an answer from them still counts).
-    const waitingFor = players.filter((p) => !answerFor(p, idx) && !isAway(p)).length
-    const everyoneAnswered = answeredCount > 0 && waitingFor === 0
-    if (remaining === 0 || everyoneAnswered) run(reveal)
+    if (status === STATUS.ACTIVE && remaining === 0) run(reveal)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, remaining === 0, answeredCount, players.length, here])
+  }, [status, remaining === 0])
 
   // Clears every player's round data; `extra` resets a score field too.
   const resetPlayers = (batch, extra = {}) =>
